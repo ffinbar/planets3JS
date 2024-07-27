@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+
+    @font-face {
+        font-family: 'comp';
+        src: url(./font.ttf);
+    }
+
+    body {
+        margin: 0;
+        overflow: hidden;
+        padding: 0;
+        font-family: 'comp';
+    }
+
+    #tutorial {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 2rem;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5em;
+        z-index: 100;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    #hud {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 1rem;
+        color: white;
+        z-index: 100;
+        line-height: 1.5;
+    }
+
+    #shipMode {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #shipMode p {
+        margin: 0;
+    }
+</style>
+<body>
+    <div id="tutorial">
+        <h1>Controls</h1>
+        <p>Click to lock the camera to the player</p>
+        <p>WASD to move, Space to fly upwards</p>
+        <p>Hold Shift to boost</p>
+        <p>Q and E to rotate</p>
+        <p>T to toggle spaceship mode. By default, you will be effected by gravity. <br><br> In Intergalactic Mode, you will not be effected by gravity and fly faster</p>
+        <p>Press Escape to unlock the mouse and see these instructions again</p>
+    </div>
+    <div id="hud">
+        <div id="shipMode">
+            <p>Spaceship Mode: <span id="spaceship">Standard</span></p>
+            <p>Boost: <span id="boost">0</span></p>
+        </div>
+    </div>
+</body>
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+            "cannon-es": "https://unpkg.com/cannon-es/dist/cannon-es.js"
+        }
+
+    }
+</script>
+<script type="module">
+    import * as THREE from 'three';
+    import * as CANNON from 'cannon-es';
+    import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+    import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/OutputPass.js';
+    import CannonDebugger from 'https://unpkg.com/cannon-es-debugger@1.0.0/dist/cannon-es-debugger.js'
+    import Stats from 'https://unpkg.com/three/examples/jsm/libs/stats.module.js';
+    import Planet from './Planet.js';
+    import Player from './Player.js';
+
+    let scene, camera, renderer, controls, composer;
+    let clock = new THREE.Clock();
+    let world, cannonDebugger;
+
+    let stats = new Stats();
+    stats.showPanel(0);
+    document.body.appendChild(stats.dom);
+
+    let meshMap = new Map();
+
+    let stars;
+
+    let player, playerBody, playerMesh;
+
+    let sun;
+    let spring;
+    let line;
+
+    let light;
+
+    let planets = [];
+    const simSpeed = 1;
+
+    const PLAYER_GROUP = 1 << 0;
+    const EVERYTHING_ELSE_GROUP = 1 << 1;
+
+    let keys = {}
+
+    let tut = document.getElementById('tutorial');
+    let hud = document.getElementById('hud');
+    let spaceship = document.getElementById('spaceship');
+    let boost = document.getElementById('boost');
+
+    init();
+    animate();
+
+    function init() {
+        
+        sceneSetup();
+        rendererSetup();
+        cameraSetup();
+        worldSetup();
+        createObjects();
+        lightSetup();
+        createPlayer();
+
+        let keyDownListener = function(event) {
+            event.preventDefault();
+            // console.log(event.code);
+            keys[event.code] = true;
+            console.log(keys);
+        };
+
+        let keyUpListener = function(event) {
+            event.preventDefault();
+            // console.log(event.code);
+            keys[event.code] = false;
+        };
+
+        window.addEventListener('keydown', keyDownListener);
+        window.addEventListener('keyup', keyUpListener);
+        onWindowResize();
+
+        window.addEventListener('click', () => {
+            tut.style.display = 'none';
+        });
+    }
+
+    
+
+    function sceneSetup() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const textureLoader = new THREE.TextureLoader();
+        const milkyWayTexture = textureLoader.load('./stars.jpg', function (texture) {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+
+            // Create a sphere geometry for the background
+            const geometry = new THREE.SphereGeometry(1000, 60, 40);
+            geometry.scale(-1, 1, 1); // Invert the geometry on the x-axis so that all of the faces point inward
+
+            const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 1 });
+
+            const backgroundMesh = new THREE.Mesh(geometry, material);
+            backgroundMesh.renderOrder = -1; // Ensure it is rendered first
+
+            scene.add(backgroundMesh);
+
+
+            stars = backgroundMesh;
+        });
+    }
+
+    function rendererSetup() {
+        renderer = new THREE.WebGLRenderer();
+        renderer.physicallyCorrectLights = true;
+        renderer.antialias = true;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setAnimationLoop( animate );
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+
+        composer = new EffectComposer(renderer);
+
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function cameraSetup() {
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 10, 0);
+        camera.near = 0.1;
+        camera.far = 10000;
+        camera.updateProjectionMatrix();
+
+
+        // controls = new OrbitControls(camera, renderer.domElement);
+        // controls.enableDamping = true;
+        // controls.dampingFactor = 0.25;
+        // controls.enableZoom = true;
+
+    }
+
+    function worldSetup() {
+        world = new CANNON.World();
+        world.gravity.set(0, 0, 0);
+        world.solver.iterations = 10;
+        world.allowSleep = false;
+        world.simSpeed = simSpeed;
+
+
+        cannonDebugger = new CannonDebugger(scene, world, {
+            onInit(body, mesh) {
+                mesh.visible = false;
+                document.addEventListener('keydown', (event) => {
+                if (event.key === '=') {
+                    mesh.visible = !mesh.visible
+                }
+                })
+            },
+        });
+    }
+
+   
+    function createObjects() {
+
+        
+
+        let gM = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true }));
+        gM.rotation.x = Math.PI / 2;
+        // scene.add(gM);
+
+        sun = new Planet({
+            name: 'sun', 
+            scene: scene, 
+            world: world,
+            color: 0xff0000, 
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(0, 0, 0),
+            initialVelocity: new CANNON.Vec3(0, 0, 0), 
+            initialAngularVelocity: new CANNON.Vec3(0, .01, 0),
+            radius: 100, 
+            gravityScale: 1,
+            gravityRadius: 1000, 
+            mass: 1000, 
+            fixed: false
+        });
+        console.log(sun);
+        planets.push(sun);
+
+        let planet1 = new Planet({
+            name: 'planet1', 
+            scene: scene, 
+            world: world, 
+            color: 0x00ff00,
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(0, 50, 200),
+            initialVelocity: new CANNON.Vec3(-2, 0, 0), 
+            initialAngularVelocity: new CANNON.Vec3(0, .1, 0),
+            radius: 10, 
+            gravityScale: 3, 
+            gravityRadius: 80, 
+            mass: 200, 
+            maxOrbitDistance: 100,
+            fixed: false
+        });
+        console.log(planet1);
+        planets.push(planet1);
+
+        let planet2 = new Planet({
+            name: 'planet2', 
+            scene: scene, 
+            world: world, 
+            color: 0x0000ff,
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(50, -60, -300),
+            initialVelocity: new CANNON.Vec3(-6, 0, 1), 
+            initialAngularVelocity: new CANNON.Vec3(0, -.3, 0),
+            radius: 20, 
+            gravityScale: 3, 
+            gravityRadius: 50, 
+            mass: 300, 
+            maxOrbitDistance: 50,
+            fixed: false
+        });
+        console.log(planet2);
+        planets.push(planet2);
+
+        let planet3 = new Planet({
+            name: 'planet3', 
+            scene: scene, 
+            world: world, 
+            color: 0x00ffff,
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(50, 20, -400),
+            initialVelocity: new CANNON.Vec3(1, 0, 0), 
+            initialAngularVelocity: new CANNON.Vec3(0, -.02, 0),
+            radius: 40, 
+            gravityScale: 1.5, 
+            gravityRadius: 170, 
+            mass: 500, 
+            maxOrbitDistance: 250,
+            fixed: false
+        });
+        console.log(planet3);
+        planets.push(planet3);
+
+        let moon1 = new Planet({
+            name: 'moon1', 
+            scene: scene, 
+            world: world, 
+            color: 0xffffff,
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(100, 0, -250),
+            initialVelocity: new CANNON.Vec3(0, 0, 0), 
+            initialAngularVelocity: new CANNON.Vec3(0, -.6, 0),
+            radius: 10, 
+            gravityScale: 1, 
+            gravityRadius: 5, 
+            mass: 50, 
+            maxOrbitDistance: 20,
+            fixed: false
+        });
+        console.log(moon1);
+        planets.push(moon1);
+        
+        let moon2 = new Planet({
+            name: 'moon2', 
+            scene: scene, 
+            world: world, 
+            color: 0xffffff,
+            simSpeed: simSpeed, 
+            meshMap: meshMap,
+            position: new CANNON.Vec3(20, 50, 300),
+            initialVelocity: new CANNON.Vec3(10, 0, 10), 
+            initialAngularVelocity: new CANNON.Vec3(0, -1, 0),
+            radius: 6, 
+            gravityScale: 1, 
+            gravityRadius: 2, 
+            mass: 6, 
+            maxOrbitDistance: 0,
+            fixed: false
+        });
+        console.log(moon2);
+        planets.push(moon2);
+
+        // for(let i = 0; i < 3; i++) {
+
+        //     let randomColor = '0x' + Math.floor(Math.random()*16777215).toString(16);
+        //     randomColor = parseInt(randomColor, 16);
+
+        //     let randomRadius = Math.floor(Math.random() * 50) + 1;
+        //     let randomMass = Math.floor(Math.random() * 10) + 1;
+        //     let randomGravityScale = Math.floor(Math.random() * 5) + 1;
+        //     let randomGravityRadius = Math.floor(Math.random() * 100) + randomRadius;
+        //     let randomMaxOrbitDistance = Math.floor(Math.random() * 100) + 20;
+        //     let randomPosition = new CANNON.Vec3(Math.floor(Math.random() * 1000 -500), Math.floor(Math.random() * 1000 - 500), Math.floor(Math.random() * 100 - 500));
+        //     let randomVelocity = new CANNON.Vec3(Math.floor(Math.random() * 10 - 5), Math.floor(Math.random() * 10 - 5), Math.floor(Math.random() * 10 - 5));
+
+        //     let planet = new Planet({
+        //         name: 'planet' + i, 
+        //         scene: scene, 
+        //         world: world, 
+        //         color: randomColor,
+        //         simSpeed: simSpeed,
+        //         meshMap: meshMap,
+        //         position: randomPosition,
+        //         initialVelocity: randomVelocity,
+        //         radius: randomRadius,
+        //         gravityScale: randomGravityScale,
+        //         gravityRadius: randomGravityRadius,
+        //         mass: randomMass,
+        //         maxOrbitDistance: randomMaxOrbitDistance,
+        //         fixed: false
+        //     });
+        //     planets.push(planet);
+        // }
+
+        // let planet2 = new Planet({
+        //     name: 'planet2', 
+        //     scene: scene, 
+        //     world: world, 
+        //     simSpeed: simSpeed, 
+        //     meshMap: meshMap,
+        //     position: new CANNON.Vec3(0, 0, -10),
+        //     initialVelocity: new CANNON.Vec3(-1, 1, 0), 
+        //     radius: 2, 
+        //     gravityScale: .1, 
+        //     gravityRadius: 6, 
+        //     mass: 5, 
+        //     fixed: false
+        // });
+        // console.log(planet2);
+        // planets.push(planet2);
+
+        let ground = new CANNON.Body({ mass: 0, collisionFilterGroup: EVERYTHING_ELSE_GROUP, collisionFilterMask: PLAYER_GROUP | EVERYTHING_ELSE_GROUP });
+        let groundShape = new CANNON.Plane();
+        ground.addShape(groundShape);
+        ground.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        ground.position.set(0, 0, 0);
+        // world.addBody(ground);
+
+        let groundGeometry = new THREE.PlaneGeometry(100, 100);
+                    
+        let groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+        let groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        groundMesh.position.set(0, 0, 0);
+
+        // scene.add(groundMesh);
+
+        //we will add lines to show the global axes
+        
+
+    }
+
+    function createPlayer() {
+        let lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]);
+        let lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
+        line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+
+        player = new Player({
+            name: 'player',
+            scene: scene,
+            world: world,
+            position: new CANNON.Vec3(0, 300, 0),
+            camera: camera,
+            meshMap: meshMap,
+        })
+        playerBody = player.body;
+        // let playerMesh = player.mesh;
+        // console.log(player.mesh);
+
+        scene.player = player;
+
+        // bindMeshToBody(playerMesh, playerBody);
+
+        window.addEventListener('click', () => {
+            if(!player.isLocked) {
+                player.enabled = true;
+                player.lock();
+            }
+        });
+       
+
+        // playerBody = new CANNON.Body({ mass: .1, fixedRotation: true });
+        // let playerShape = new CANNON.Box(new CANNON.Vec3(.1, .2, .1));
+        // playerBody.addShape(playerShape);
+        // playerBody.position.set(0, 5, 0);
+        // playerBody.timeScale = 1;
+        // world.addBody(playerBody);
+
+
+        // let playerGeometry = new THREE.SphereGeometry(.1, 32, 32);
+        // let playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        // playerMesh = new THREE.Mesh(playerGeometry, playerMaterial);
+        // playerMesh.castShadow = true;
+
+        // let lineXGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0)]);
+        // let lineXMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        // let lineX = new THREE.Line(lineXGeometry, lineXMaterial);
+        // playerMesh.add(lineX);
+
+        // let lineYGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)]);
+        // let lineYMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+        // let lineY = new THREE.Line(lineYGeometry, lineYMaterial);
+        // playerMesh.add(lineY);
+
+        // let lineZGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1)]);
+        // let lineZMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+        // let lineZ = new THREE.Line(lineZGeometry, lineZMaterial);
+        // playerMesh.add(lineZ);
+
+        // let forwardLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+        // let forwardLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+        // let forwardLine = new THREE.Line(forwardLineGeometry, forwardLineMaterial);
+        // playerMesh.add(forwardLine);
+    }
+
+    function getClosestPlanet(body) {
+        let origin = new CANNON.Vec3(0, 0, 0);
+        let closestPlanet = origin;
+        let closestDistance = body.position.distanceTo(closestPlanet);
+        let closestBody = null;
+        planets.forEach(planet => {
+            let distance = new CANNON.Vec3().copy(planet.body.position).vsub(body.position).length() - planet.radius;
+            if (distance < closestDistance && distance < (planet.gravityRadius - planet.radius)) {
+                closestDistance = distance;
+                closestPlanet = planet.body.position;
+                closestBody = planet.body;
+            }
+        });
+        if(closestPlanet === origin) {
+            closestPlanet = null;
+        }
+        // console.log(closestPlanet); 
+        return closestBody;
+    }
+
+    function bindMeshToBody(mesh, body) {
+        meshMap.set(body, mesh);
+    }
+
+    function syncMeshes() {
+        world.bodies.forEach((body) => {
+            body.angularDamping = 0;
+            body.linearDamping = 0;
+            let mesh = meshMap.get(body);
+            if (mesh) {
+                mesh.position.copy(body.position);
+                mesh.quaternion.copy(body.quaternion);
+            }
+        });
+    }
+    // camera.lookAt(0, 0, 0);
+
+    function lightSetup() {
+        light = new THREE.DirectionalLight(0xffffff, 2);
+        light.position.set(0, 100, 0);
+        light.castShadow = true;
+        light.shadow.bias = -0.0001;
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
+
+
+        scene.add(light);
+    }
+
+  
+    function animate() {
+        let delta = clock.getDelta();
+
+        // console.log(playerBody
+
+        
+
+        if(player) {
+
+            if(!player.enabled) tut.style.display = 'flex';
+
+            let playerPosition = playerBody.position;
+
+
+            light.position.set(playerPosition.x, playerPosition.y + 100, playerPosition.z);
+            light.target.position.set(playerPosition.x, playerPosition.y, playerPosition.z);
+            light.target.updateMatrixWorld();
+
+            light.shadow.camera.position.set(playerPosition.x, playerPosition.y + 100, playerPosition.z);
+            light.shadow.camera.updateProjectionMatrix();
+
+            playerBody.velocity.scale(0.9, playerBody.velocity);
+            playerBody.angularVelocity.scale(0.9, playerBody.angularVelocity);
+
+            // align player y axis with planet
+            let closestPlanet = getClosestPlanet(playerBody);
+            if(closestPlanet === null || player.isSpaceShip) {
+                playerBody.orbitBody = null;
+
+                // console.log(player.initialCameraRotation);
+                camera.rotation.x = player.initialCameraRotation.x;
+
+                if (playerBody.mouseRotX !== undefined) {
+                    let yRotationQuaternion = new CANNON.Quaternion();
+                    yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -playerBody.mouseRotX * .005);
+                    playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+
+                    // Reset mouseRotX to avoid continuous rotation
+                    playerBody.mouseRotX = 0;
+                }
+                if(playerBody.mouseRotY !== undefined) {
+                    let xRotationQuaternion = new CANNON.Quaternion();
+                    xRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -playerBody.mouseRotY * .005);
+                    playerBody.quaternion = playerBody.quaternion.mult(xRotationQuaternion);
+
+                    // Reset mouseRotY to avoid continuous rotation
+                    playerBody.mouseRotY = 0;
+                }
+
+                if(keys['KeyE']) {
+                    //rotate player right
+                    let yRotationQuaternion = new CANNON.Quaternion();
+                    yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -0.05);
+                    playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+                }
+                if(keys['KeyQ']) {
+                    //rotate player left
+                    let yRotationQuaternion = new CANNON.Quaternion();
+                    yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0.05);
+                    playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+                }
+                
+            } else {
+
+                let planetCenter = closestPlanet.position;
+                player.body.orbitBody = closestPlanet;
+                let planetUpWorld = playerPosition.vsub(planetCenter);
+
+                let planetUpLocal = playerBody.vectorToLocalFrame(planetUpWorld);                
+                let playerUpLocal = new CANNON.Vec3(0, 1, 0);
+
+                playerUpLocal.normalize();
+                planetUpLocal.normalize();
+
+                let dot = playerUpLocal.dot(planetUpLocal);
+                let angle = Math.acos(dot);
+
+                let axis = playerUpLocal.cross(planetUpLocal);
+                axis.normalize();
+
+                let q = new CANNON.Quaternion();
+                q.setFromAxisAngle(axis, angle);
+                let targetQuaternion = playerBody.quaternion.mult(q);
+
+                playerBody.quaternion = playerBody.quaternion.slerp(targetQuaternion, .1);
+                
+                let quaternion = new CANNON.Quaternion();
+                quaternion.setFromEuler(closestPlanet.angularVelocity.x * delta, closestPlanet.angularVelocity.y * delta, closestPlanet.angularVelocity.z * delta, 'XYZ');
+                planetUpWorld = quaternion.vmult(planetUpWorld);
+
+                playerBody.position = planetCenter.vadd(planetUpWorld);
+                // playerBody.velocity.copy(closestPlanet.velocity);
+                // playerBody.angularVelocity.copy(closestPlanet.angularVelocity);
+                // console.log(closestPlanet.velocity, closestPlanet.angularVelocity);
+                // console.log(playerBody.velocity, playerBody.angularVelocity);
+
+                if (playerBody.mouseRotX !== undefined) {
+                    let yRotationQuaternion = new CANNON.Quaternion();
+                    yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -playerBody.mouseRotX * 0.01);
+                    playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+
+                    playerBody.mouseRotX = 0;
+                }
+                if(playerBody.mouseRotY !== undefined) {
+                    camera.rotation.x -= playerBody.mouseRotY * .005;
+                    playerBody.mouseRotY = 0;
+                }
+
+            }
+
+            if(keys['ShiftLeft']) {
+                player.boosting = player.boostCapacity > 0 ? true : false;
+            } else {
+                player.boosting = false;
+            }
+
+            let moveSpeed = 60;
+            moveSpeed = player.boosting ? moveSpeed * 10 : moveSpeed;
+
+            if(keys['KeyW']) {
+                
+                playerBody.applyLocalForce(new CANNON.Vec3(0, 0, -moveSpeed), new CANNON.Vec3(0, 0, 0));
+            }
+            if(keys['KeyS']) {
+                playerBody.applyLocalForce(new CANNON.Vec3(0, 0, moveSpeed), new CANNON.Vec3(0, 0, 0));
+            }
+            if(keys['KeyA']) {
+                playerBody.applyLocalForce(new CANNON.Vec3(-moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
+            }
+            if(keys['KeyD']) {
+                playerBody.applyLocalForce(new CANNON.Vec3(moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
+
+            }
+            
+            if(keys['Space']) {
+                player.spaceDown = true;
+            } else {
+                player.spaceDown = false;
+            }
+
+            if(player.spaceDown) {
+                playerBody.applyLocalForce(new CANNON.Vec3(0, moveSpeed*2, 0));
+                // console.log(player.body.gravityForce.scale(-100).vadd(new CANNON.Vec3(0, moveSpeed*2, 0)));
+
+            } if(player.boosting) {
+                player.boostCapacity > 0 ? player.boostCapacity -= 5 : player.boostCapacity = 0;
+            } else {
+                player.boostCapacity < 1000 ? player.boostCapacity += 2 : player.boostCapacity = 1000;
+            }
+            boost.innerText = player.boostCapacity <= 0 ? 0 : player.boostCapacity;
+
+            if(stars) stars.position.copy(playerBody.position);
+
+            // console.log(keys)
+
+        }
+
+        world.bodies.forEach(body => {
+            body.inOrbit = false;
+            body.orbitBody = null;
+        });
+
+        scene.planets = planets;
+
+
+        planets.forEach(planet => {
+            planet.update(delta);
+        });
+
+
+        world.step(delta);
+
+        if(keys['KeyT']) {
+            player.toggleSpaceShip();
+            spaceship.innerHTML = player.isSpaceShip ? 'Intergalactic <br> Zero-Gravity, Higher Speed' : 'Standard';
+            keys['KeyT'] = false;
+        }
+        // console.log(playerBody)
+        // console.log(sun.body.position);
+        cannonDebugger.update();
+        syncMeshes();
+        // controls.update();
+        stats.update();
+        renderer.render(scene, camera);
+    }
+
+
+</script>
+
+</html>
