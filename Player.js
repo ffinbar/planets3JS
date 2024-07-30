@@ -51,14 +51,16 @@ class Player extends THREE.EventDispatcher {
             this.scene.add(this.mesh);
 
             this.mesh.add(this.camera);
-            this.camera.position.set(0, 1, 0);
+            this.camera.position.set(0, 2, 1.5);
+            this.originalCameraPosition = this.camera.position.clone();
             this.camera.lookAt(this.mesh.position);
+            this.initialCameraRotation = new THREE.Vector3(this.camera.rotation.x, this.camera.rotation.y, this.camera.rotation.z);
+            this.camera.xDest = this.initialCameraRotation.x;
+
+            this.camera.rotation.set(this.initialCameraRotation.x, this.initialCameraRotation.y, this.initialCameraRotation.z);
 
             this.meshMap.set(this.body, this.mesh);
         });
-
-
-        this.initialCameraRotation = this.camera.rotation.clone();
 
         this.connect();
 
@@ -249,18 +251,12 @@ class Player extends THREE.EventDispatcher {
             this.body.velocity.set(0, 0, 0);
             this.body.angularVelocity.set(0, 0, 0);
 
-            this.body.quaternion = this.body.quaternion.slerp(new CANNON.Quaternion(0, 0, 0, 1), .01)
-
-            this.camera.rotation.set(0, 0, 0);
-            this.camera.position.set(0, 0.3, 1);
-            // this.camera.lookAt(this.mesh.position);
+            this.camera.xDest = 0;
+            this.camera.posDest = new THREE.Vector3(0, .5, 3);
+            // this.camera.lookAt(0,1,0);
         } else {
-            this.body.orbitBody = null;
-            this.body.velocity.set(0, 0, 0);
-            this.body.angularVelocity.set(0, 0, 0);
-            // this.body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), 0);
-            this.camera.position.set(0, 1, 0);
-            // this.camera.lookAt(this.mesh.position);
+            this.camera.posDest = new THREE.Vector3(this.originalCameraPosition.x, this.originalCameraPosition.y, this.originalCameraPosition.z);
+            this.camera.xDest = this.initialCameraRotation.x;
         }
     }
 

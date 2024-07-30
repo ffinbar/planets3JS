@@ -17,6 +17,15 @@
         overflow: hidden;
         padding: 0;
         font-family: 'comp';
+        overflow: hidden;
+    }
+
+    canvas {
+        max-width: 100%;
+        max-height: 100%;
+        width: 100%;
+        height: 100%;
+        display: block;
     }
 
     #tutorial {
@@ -57,21 +66,175 @@
     #shipMode p {
         margin: 0;
     }
+
+    #touchUI {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 80vw;
+        margin: 0 auto;
+        padding: 1rem;
+        justify-content: space-around;
+        z-index: 100;
+        max-width: 100%;
+        display: flex;
+        flex-direction: row;
+        /* flex-wrap: wrap; */
+    }
+
+    #touchTips {
+        position: absolute;
+        top: 6rem;
+        left: 0;
+        right: 0;
+        width: 80vw;
+        margin: 0 auto;
+        padding: 0;
+        justify-content: space-around;
+        z-index: 100;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        font-size: .8em;
+        user-select: none;
+        border-radius: 1rem;
+        line-height: 1.5;
+        font-family: 'Arial';
+        overflow: hidden;
+    }
+
+    #touchTips p {
+        margin: 0;
+        height: 0;
+        line-height: 0;
+        color: transparent;
+    }
+
+    #touchTips p.currentTip {
+        height: auto;
+        line-height: 1.5;
+        padding: 1rem;
+        color: white;
+    }
+
+    .touchButton {
+        padding: 1rem;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        font-size: 2rem;
+    }
+
+    .touchButton:active {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    #forward {
+        transform: rotate(180deg);
+    }
+
+    #left {
+        transform: rotate(90deg);
+    }
+
+    #right {
+        transform: rotate(-90deg);
+    }
+
+    #lr {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        width: 150%;
+    }
+
+    #dpad {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .active {
+        background-color: rgba(0, 119, 255, 0.8);
+    }
+
+    #btns {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #shipModeTouch {
+        transition: opacity 1s;
+        pointer-events: none;
+    }
+
+    #accelToggle {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        padding: .5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.5);
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        opacity: 0;
+        transition: opacity 1s;
+    }
 </style>
 <body>
-    <div id="tutorial">
+    <!-- <div id="tutorial">
         <h1>Controls</h1>
         <p>Click to lock the camera to the player</p>
         <p>WASD to move, Space to fly upwards</p>
         <p>Hold Shift to boost</p>
         <p>Q and E to rotate</p>
-        <p>T to toggle spaceship mode. By default, you will be effected by gravity. <br><br> In Intergalactic Mode, you will not be effected by gravity and fly faster</p>
+        <p>T to toggle spaceship mode. By default, you will be affected by gravity.<br><br> In Intergalactic Mode, you will not be effected by gravity and fly faster</p>
         <p>Press Escape to unlock the mouse and see these instructions again</p>
+    </div> -->
+    <div id="touchTips">
+        <p data-delay="7000" class="currentTip">Welcome! Swipe the screen to look around, and press the arrow buttons to fly your ship</p>
+        <p data-delay="5000">When in Landing mode, (like right now) you are affected by planet's gravity</p>
+        <p data-takeoff="true">After Takeoff, you can fly faster and are unaffected by gravity</p>
+        <p data-delay="7000" data-tilt="true">Swipe to steer your ship while in Takeoff mode. You can also roll your ship by tilting your device. Try steering with one finger while pressing a direction key with another.</p>
+        <p data-delay="5000">Gravity fields are represented as spheres around planets</p>
+        <p data-delay="7000">Some gravity fields are stronger than others, and will conflict with each other. You may be unable to land if you are too close to multiple planets</p>
+        <p data-delay="7000">Your ship will orient itself to the closest planet's gravity field when in Landing mode. You will also match the planet's rotation and move with it</p>
+    </div>
+    <div id="touchUI" style="display: none;">
+        <div id="accelToggle">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M496-182 182-496q-23-23-23-54t23-54l174-174q23-23 54-23t54 23l314 314q23 23 23 54t-23 54L604-182q-23 23-54 23t-54-23Zm54-58 170-170-310-310-170 170 310 310ZM480 0q-99 0-186.5-37.5t-153-103Q75-206 37.5-293.5T0-480h80q0 71 24 136t66.5 117Q213-175 272-138.5T401-87L296-192l56-56L588-12q-26 6-53.5 9T480 0Zm400-480q0-71-24-136t-66.5-117Q747-785 688-821.5T559-873l105 105-56 56-236-236q26-6 53.5-9t54.5-3q99 0 186.5 37.5t153 103q65.5 65.5 103 153T960-480h-80Zm-400 0Z"/></svg>
+        </div>
+        <div id="dpad">
+            <div id="forward" class="touchButton">V</div>
+            <div id="lr">
+                <div id="left" class="touchButton">V</div>
+                <div id="right" class="touchButton">V</div>
+            </div>
+            <div id="back" class="touchButton">V</div>
+        </div>
+        <div id="btns">
+            <div id="boostBtn" class="touchButton">Boost</div>
+            <div id="shipModeTouch" class="touchButton" style="opacity: 0;">Takeoff</div>    
+        </div>
+      
     </div>
     <div id="hud">
         <div id="shipMode">
-            <p>Spaceship Mode: <span id="spaceship">Standard</span></p>
-            <p>Boost: <span id="boost">0</span></p>
+            <p>Spaceship Mode: <span id="spaceship">Surface Explorer<br>Press T to Takeoff</span></p>
+            <!-- <p>Boost: <span id="boost">0</span></p> -->
         </div>
     </div>
 </body>
@@ -103,7 +266,7 @@
 
     let stats = new Stats();
     stats.showPanel(0);
-    document.body.appendChild(stats.dom);
+    // document.body.appendChild(stats.dom);
 
     let meshMap = new Map();
 
@@ -116,6 +279,7 @@
     let line;
 
     let light;
+    let canvas;
 
     let planets = [];
     const simSpeed = 1;
@@ -125,29 +289,81 @@
 
     let keys = {}
 
-    let tut = document.getElementById('tutorial');
+    // let tut = document.getElementById('tutorial');
     let hud = document.getElementById('hud');
     let spaceship = document.getElementById('spaceship');
     let boost = document.getElementById('boost');
+    let touchUI;
+
+    let touchFwd = document.getElementById('forward');
+    let touchBack = document.getElementById('back');
+    let touchLeft = document.getElementById('left');
+    let touchRight = document.getElementById('right');
+    let boostToggle = document.getElementById('boostBtn')
+    let takeoffToggle = document.getElementById('shipModeTouch');
+
+    let accelToggle = document.getElementById('accelToggle');
+    let accel = true;
 
     init();
     animate();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        nextTip(0, 5000);
+    });
+
+    function nextTip(idx, delay) {
+        let tips = document.getElementById('touchTips').children;
+        let currentTip = tips[idx];
+        if(currentTip.dataset.takeoff) {
+            takeoffToggle.style.opacity = 1;
+            takeoffToggle.style.pointerEvents = 'auto';
+        }
+        if(currentTip.dataset.tilt) {
+            accelToggle.style.opacity = 1;
+            accelToggle.style.pointerEvents = 'auto';
+        }
+        let nextTipIdx = tips[idx + 1];
+        if(nextTipIdx) {
+            setTimeout(() => {
+                currentTip.classList.remove('currentTip');
+                nextTipIdx.classList.add('currentTip');
+                if(nextTipIdx.dataset.delay) {
+                    delay = nextTipIdx.dataset.delay;
+                }
+                nextTip(idx + 1, delay);
+            }, delay);
+        } else {
+            setTimeout(() => {
+                currentTip.classList.remove('currentTip');
+            }, delay);
+        }
+    }
+    
 
     function init() {
         
         sceneSetup();
         rendererSetup();
         cameraSetup();
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
         worldSetup();
         createObjects();
         lightSetup();
         createPlayer();
 
+        
+
         let keyDownListener = function(event) {
             event.preventDefault();
             // console.log(event.code);
             keys[event.code] = true;
-            console.log(keys);
         };
 
         let keyUpListener = function(event) {
@@ -158,13 +374,155 @@
 
         window.addEventListener('keydown', keyDownListener);
         window.addEventListener('keyup', keyUpListener);
-        onWindowResize();
 
-        window.addEventListener('click', () => {
-            tut.style.display = 'none';
+        touchFwd.addEventListener('touchstart', () => {
+            keys['KeyW'] = true;
         });
+        touchFwd.addEventListener('touchend', () => {
+            keys['KeyW'] = false;
+        });
+
+        touchBack.addEventListener('touchstart', () => {
+            keys['KeyS'] = true;
+        });
+        touchBack.addEventListener('touchend', () => {
+            keys['KeyS'] = false;
+        });
+
+        touchLeft.addEventListener('touchstart', () => {
+            keys['KeyA'] = true;
+        });
+        touchLeft.addEventListener('touchend', () => {
+            keys['KeyA'] = false;
+        });
+
+        touchRight.addEventListener('touchstart', () => {
+            keys['KeyD'] = true;
+        });
+        touchRight.addEventListener('touchend', () => {
+            keys['KeyD'] = false;
+        });
+
+        boostToggle.addEventListener('touchstart', () => {
+            keys['ShiftLeft'] = !keys['ShiftLeft'];
+            if(keys['ShiftLeft']) {
+                boostToggle.classList.add('active');
+            } else {
+                boostToggle.classList.remove('active');
+            }
+        });
+
+        takeoffToggle.addEventListener('touchstart', () => {
+            keys['KeyT'] = true;
+        });
+        takeoffToggle.addEventListener('touchend', () => {
+            keys['KeyT'] = false;
+            if(!player.isSpaceShip) {
+                takeoffToggle.innerHTML = 'Takeoff';
+            } else {
+                takeoffToggle.innerHTML = 'Land';
+            }
+        });
+
+        accelToggle.addEventListener('click', () => {
+            accel = !accel;
+            if(accel) {
+                accelToggle.style.opacity = 1;
+            } else {
+                accelToggle.style.opacity = .5;
+            }
+        });
+            
+
+        function handleOrientation(event) {
+            // alert(event.beta);
+
+            const gamma = event.gamma;
+
+            // Update the player's quaternion based on the device orientation
+            let yRotationQuaternion = new CANNON.Quaternion();
+            yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -gamma * .0005);
+            playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+
+
+        }
+
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener(
+                "deviceorientation",
+                (event) => {
+                const rotateDegrees = event.alpha; // alpha: rotation around z-axis
+                const leftToRight = event.gamma; // gamma: left to right
+                const frontToBack = event.beta; // beta: front back motion
+
+                if(player.isSpaceShip && accel) handleOrientation(event);
+                },
+                true,
+            );
+            } else {
+            alert("Sorry, your browser doesn't support Device Orientation");
+        }
+
+        // window.addEventListener('click', () => {
+        //     tut.style.display = 'none';
+        // });
+
+        let touchPoints = {};
+
+        canvas.addEventListener('touchstart', function(event) {
+            event.preventDefault();
+            for (let i = 0; i < event.touches.length; i++) {
+                const touch = event.touches[i];
+                touchPoints[touch.identifier] = { startX: touch.clientX, startY: touch.clientY, endX: touch.clientX, endY: touch.clientY };
+            }
+        });
+
+        canvas.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+            for (let i = 0; i < event.touches.length; i++) {
+                const touch = event.touches[i];
+                if (touchPoints[touch.identifier]) {
+                    touchPoints[touch.identifier].endX = touch.clientX;
+                    touchPoints[touch.identifier].endY = touch.clientY;
+                }
+            }
+
+            let deltaX = 0;
+            let deltaY = 0;
+            for (let id in touchPoints) {
+                const point = touchPoints[id];
+                deltaX += point.endX - point.startX;
+                deltaY += point.endY - point.startY;
+                point.startX = point.endX;
+                point.startY = point.endY;
+            }
+
+            // Update playerBody.mouseRotX and playerBody.mouseRotY based on swipe distance
+            playerBody.mouseRotX = deltaX
+            playerBody.mouseRotY = deltaY
+        });
+
+        canvas.addEventListener('touchend', function(event) {
+            event.preventDefault();
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                const touch = event.changedTouches[i];
+                delete touchPoints[touch.identifier];
+            }
+        });
+
+        if(isTouchDevice()) {
+            touchUI = document.getElementById('touchUI');
+            touchUI.style.display = 'flex';
+
+            hud.style.display = 'none';
+        }
+
+
     }
 
+    function isTouchDevice() {
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    }
     
 
     function sceneSetup() {
@@ -201,18 +559,14 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
+        canvas = renderer.domElement;
 
 
         composer = new EffectComposer(renderer);
+        
 
-        window.addEventListener('resize', onWindowResize);
     }
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
 
     function cameraSetup() {
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
@@ -458,7 +812,7 @@
             name: 'player',
             scene: scene,
             world: world,
-            position: new CANNON.Vec3(0, 300, 0),
+            position: new CANNON.Vec3(0, 101, 0),
             camera: camera,
             meshMap: meshMap,
         })
@@ -471,7 +825,7 @@
         // bindMeshToBody(playerMesh, playerBody);
 
         window.addEventListener('click', () => {
-            if(!player.isLocked) {
+            if(!player.isLocked && !isTouchDevice()) {
                 player.enabled = true;
                 player.lock();
             }
@@ -571,7 +925,7 @@
 
         if(player) {
 
-            if(!player.enabled) tut.style.display = 'flex';
+            // if(!player.enabled) tut.style.display = 'flex';
 
             let playerPosition = playerBody.position;
 
@@ -588,11 +942,18 @@
 
             // align player y axis with planet
             let closestPlanet = getClosestPlanet(playerBody);
-            if(closestPlanet === null || player.isSpaceShip) {
-                playerBody.orbitBody = null;
 
-                // console.log(player.initialCameraRotation);
-                camera.rotation.x = player.initialCameraRotation.x;
+
+
+            if(camera.posDest) {
+                let cameraTargetPos = new THREE.Vector3(camera.posDest.x, camera.posDest.y, camera.posDest.z);
+                camera.position.lerp(cameraTargetPos, .1);
+            }
+
+            camera.rotation.x = camera.rotation.x + (camera.xDest - camera.rotation.x) * .1;
+
+            if(closestPlanet === null || player.isSpaceShip) {
+                playerBody.orbitBody = null;                
 
                 if (playerBody.mouseRotX !== undefined) {
                     let yRotationQuaternion = new CANNON.Quaternion();
@@ -667,31 +1028,32 @@
                 }
                 if(playerBody.mouseRotY !== undefined) {
                     camera.rotation.x -= playerBody.mouseRotY * .005;
+                    camera.xDest = camera.xDest - playerBody.mouseRotY * .005;
                     playerBody.mouseRotY = 0;
                 }
 
             }
 
             if(keys['ShiftLeft']) {
-                player.boosting = player.boostCapacity > 0 ? true : false;
+                player.boosting = true;
             } else {
                 player.boosting = false;
             }
 
-            let moveSpeed = 60;
+            let moveSpeed = 50;
             moveSpeed = player.boosting ? moveSpeed * 10 : moveSpeed;
 
-            if(keys['KeyW']) {
+            if(keys['KeyW'] || keys['ArrowUp']) {
                 
                 playerBody.applyLocalForce(new CANNON.Vec3(0, 0, -moveSpeed), new CANNON.Vec3(0, 0, 0));
             }
-            if(keys['KeyS']) {
+            if(keys['KeyS'] || keys['ArrowDown']) {
                 playerBody.applyLocalForce(new CANNON.Vec3(0, 0, moveSpeed), new CANNON.Vec3(0, 0, 0));
             }
-            if(keys['KeyA']) {
+            if(keys['KeyA'] || keys['ArrowLeft']) {
                 playerBody.applyLocalForce(new CANNON.Vec3(-moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
             }
-            if(keys['KeyD']) {
+            if(keys['KeyD'] || keys['ArrowRight']) {
                 playerBody.applyLocalForce(new CANNON.Vec3(moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
 
             }
@@ -706,12 +1068,13 @@
                 playerBody.applyLocalForce(new CANNON.Vec3(0, moveSpeed*2, 0));
                 // console.log(player.body.gravityForce.scale(-100).vadd(new CANNON.Vec3(0, moveSpeed*2, 0)));
 
-            } if(player.boosting) {
-                player.boostCapacity > 0 ? player.boostCapacity -= 5 : player.boostCapacity = 0;
-            } else {
-                player.boostCapacity < 1000 ? player.boostCapacity += 2 : player.boostCapacity = 1000;
-            }
-            boost.innerText = player.boostCapacity <= 0 ? 0 : player.boostCapacity;
+            } 
+            // if(player.boosting) {
+            //     player.boostCapacity > 0 ? player.boostCapacity -= 5 : player.boostCapacity = 0;
+            // } else {
+            //     player.boostCapacity < 1000 ? player.boostCapacity += 2 : player.boostCapacity = 1000;
+            // }
+            // boost.innerText = player.boostCapacity <= 0 ? 0 : player.boostCapacity;
 
             if(stars) stars.position.copy(playerBody.position);
 
@@ -736,7 +1099,7 @@
 
         if(keys['KeyT']) {
             player.toggleSpaceShip();
-            spaceship.innerHTML = player.isSpaceShip ? 'Intergalactic <br> Zero-Gravity, Higher Speed' : 'Standard';
+            spaceship.innerHTML = player.isSpaceShip ? 'Intergalactic <br> Zero-Gravity, Higher Speed' : 'Surface Explorer <br> Affected by Gravity';
             keys['KeyT'] = false;
         }
         // console.log(playerBody)
@@ -744,7 +1107,7 @@
         cannonDebugger.update();
         syncMeshes();
         // controls.update();
-        stats.update();
+        // stats.update();
         renderer.render(scene, camera);
     }
 
