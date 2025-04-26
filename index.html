@@ -51,16 +51,31 @@
         position: absolute;
         top: 0;
         right: 0;
-        padding: 1rem;
         color: white;
         z-index: 100;
         line-height: 1.5;
+        width: 100vw;
+        height: 100svh;
+        margin: 0;
+    }
+
+    .controlsList {
+        background: rgba(0, 0, 0, 0.5);
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        gap: 2rem;
+        margin: 0 auto;
+        width: 100%;
+        justify-content: center;
     }
 
     #shipMode {
         display: flex;
         flex-direction: column;
         align-items: center;
+        font-size: 1.5em;
+        padding-top: 1rem;
     }
 
     #shipMode p {
@@ -83,7 +98,7 @@
         /* flex-wrap: wrap; */
     }
 
-    #touchTips {
+    .tips {
         position: absolute;
         top: 6rem;
         left: 0;
@@ -105,17 +120,19 @@
         line-height: 1.5;
         font-family: 'Arial';
         overflow: hidden;
+        pointer-events: auto;
     }
 
-    #touchTips p {
+    .tips p {
         margin: 0;
         height: 0;
         line-height: 0;
         color: transparent;
     }
 
-    #touchTips p.currentTip {
+    .tips p.currentTip {
         height: auto;
+        font-size: 1.5rem;
         line-height: 1.5;
         padding: 1rem;
         color: white;
@@ -193,6 +210,7 @@
         opacity: 0;
         transition: opacity 1s;
     }
+
 </style>
 <body>
     <!-- <div id="tutorial">
@@ -204,14 +222,26 @@
         <p>T to toggle spaceship mode. By default, you will be affected by gravity.<br><br> In Intergalactic Mode, you will not be effected by gravity and fly faster</p>
         <p>Press Escape to unlock the mouse and see these instructions again</p>
     </div> -->
-    <div id="touchTips">
-        <p data-delay="7000" class="currentTip">Welcome! Swipe the screen to look around, and press the arrow buttons to fly your ship</p>
+    <div id="touchTips" class="tips" style="display: none;">
+        <p data-delay="10000" class="currentTip">Welcome! Swipe the screen to look around, and press the forward button to fly your ship</p>
         <p data-delay="5000">When in Landing mode, (like right now) you are affected by planet's gravity</p>
         <p data-takeoff="true">After Takeoff, you can fly faster and are unaffected by gravity</p>
-        <p data-delay="7000" data-tilt="true">Swipe to steer your ship while in Takeoff mode. You can also roll your ship by tilting your device. Try steering with one finger while pressing a direction key with another.</p>
+        <p data-delay="7000" data-tilt="true">Swipe to steer your ship while in Takeoff mode. You can also roll your ship by tilting your device. Try steering with one finger while pressing the forward button with another.</p>
         <p data-delay="5000">Gravity fields are represented as spheres around planets</p>
         <p data-delay="7000">Some gravity fields are stronger than others, and will conflict with each other. You may be unable to land if you are too close to multiple planets</p>
         <p data-delay="7000">Your ship will orient itself to the closest planet's gravity field when in Landing mode. You will also match the planet's rotation and move with it</p>
+    </div>
+    <div id="desktopTips" class="tips">
+        <p data-delay="10000" class="currentTip">Welcome! Click anywhere to lock the mouse to the player</p>
+        <p data-delay="7000">Use the mouse to look around, and Space to fly your ship forward</p>
+        <p data-delay="7000">Hold Shift to boost your thrusters</p>
+        <p data-delay="15000">Your ship has two modes. In Surface Explorer mode you will be affected by gravity (like right now)</p>
+        <p data-delay="5000" data-takeoff="true">Press T to takeoff and enter Intergalactic Mode</p>
+        <p data-delay="10000">In Intergalactic Mode, you will not be affected by gravity and can fly faster</p>
+        <p data-delay="5000">Your spaceship mode is displayed in the top-left corner</p>
+        <p data-delay="5000">Use Q and E to roll your ship</p>
+        <p data-delay="5000">Press Escape to unlock the mouse</p>
+        <p data-delay="10000">Would you like to see these instructions again? Click <button id="showInstructions">here</button></p>
     </div>
     <div id="touchUI" style="display: none;">
         <div id="accelToggle">
@@ -219,11 +249,6 @@
         </div>
         <div id="dpad">
             <div id="forward" class="touchButton">V</div>
-            <div id="lr">
-                <div id="left" class="touchButton">V</div>
-                <div id="right" class="touchButton">V</div>
-            </div>
-            <div id="back" class="touchButton">V</div>
         </div>
         <div id="btns">
             <div id="boostBtn" class="touchButton">Boost</div>
@@ -233,9 +258,19 @@
     </div>
     <div id="hud">
         <div id="shipMode">
-            <p>Spaceship Mode: <span id="spaceship">Surface Explorer<br>Press T to Takeoff</span></p>
+            <p>Spaceship Mode: <span id="spaceship">Surface Explorer</span></p>
+            <p id="modeSub"></p>
             <!-- <p>Boost: <span id="boost">0</span></p> -->
         </div>
+
+        <div class="controlsList">
+            <p>Space - Thrust Forward</p>
+            <p>Shift - Boost</p>
+            <p>Q/E - Roll</p>
+            <p>T - Toggle Spaceship Mode</p>
+            <p>Escape - Unlock Mouse</p>
+        </div>
+
     </div>
 </body>
 <script type="importmap">
@@ -293,14 +328,14 @@
     let hud = document.getElementById('hud');
     let spaceship = document.getElementById('spaceship');
     let boost = document.getElementById('boost');
-    let touchUI;
+    let touchUI, touchTips, desktopTips;
 
     let touchFwd = document.getElementById('forward');
-    let touchBack = document.getElementById('back');
-    let touchLeft = document.getElementById('left');
-    let touchRight = document.getElementById('right');
     let boostToggle = document.getElementById('boostBtn')
     let takeoffToggle = document.getElementById('shipModeTouch');
+    let modeSub = document.getElementById('modeSub');
+
+    let showInstructions = document.getElementById('showInstructions');
 
     let accelToggle = document.getElementById('accelToggle');
     let accel = true;
@@ -309,15 +344,29 @@
     animate();
 
     document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('click', () => {
+            nextTip(0, 5000);
+        }, { once: true });
+    });
+
+    showInstructions.addEventListener('click', () => {
+        let instructionsParent = showInstructions.parentElement;
+        instructionsParent.classList.remove('currentTip');
+        desktopTips.style.display = 'flex';
+        touchTips.style.display = 'none';
         nextTip(0, 5000);
     });
 
     function nextTip(idx, delay) {
-        let tips = document.getElementById('touchTips').children;
+        let tips = isTouchDevice() ? touchTips.children : desktopTips.children;
         let currentTip = tips[idx];
         if(currentTip.dataset.takeoff) {
-            takeoffToggle.style.opacity = 1;
-            takeoffToggle.style.pointerEvents = 'auto';
+            if(isTouchDevice()) {
+                takeoffToggle.style.opacity = 1;
+                takeoffToggle.style.pointerEvents = 'auto';
+            } else {
+                modeSub.innerHTML = 'Press T to Takeoff';
+            }
         }
         if(currentTip.dataset.tilt) {
             accelToggle.style.opacity = 1;
@@ -376,31 +425,10 @@
         window.addEventListener('keyup', keyUpListener);
 
         touchFwd.addEventListener('touchstart', () => {
-            keys['KeyW'] = true;
+            keys['Space'] = true;
         });
         touchFwd.addEventListener('touchend', () => {
-            keys['KeyW'] = false;
-        });
-
-        touchBack.addEventListener('touchstart', () => {
-            keys['KeyS'] = true;
-        });
-        touchBack.addEventListener('touchend', () => {
-            keys['KeyS'] = false;
-        });
-
-        touchLeft.addEventListener('touchstart', () => {
-            keys['KeyA'] = true;
-        });
-        touchLeft.addEventListener('touchend', () => {
-            keys['KeyA'] = false;
-        });
-
-        touchRight.addEventListener('touchstart', () => {
-            keys['KeyD'] = true;
-        });
-        touchRight.addEventListener('touchend', () => {
-            keys['KeyD'] = false;
+            keys['Space'] = false;
         });
 
         boostToggle.addEventListener('touchstart', () => {
@@ -510,11 +538,22 @@
             }
         });
 
+        touchUI = document.getElementById('touchUI');
+        desktopTips = document.getElementById('desktopTips');
+        touchTips = document.getElementById('touchTips');
+
         if(isTouchDevice()) {
-            touchUI = document.getElementById('touchUI');
             touchUI.style.display = 'flex';
+            desktopTips.style.display = 'none';
+            touchTips.style.display = 'flex';
 
             hud.style.display = 'none';
+        } else {
+            touchUI.style.display = 'none';
+            desktopTips.style.display = 'flex';
+            touchTips.style.display = 'none';
+
+            hud.style.display = 'block';
         }
 
 
@@ -1043,38 +1082,25 @@
             let moveSpeed = 50;
             moveSpeed = player.boosting ? moveSpeed * 10 : moveSpeed;
 
-            if(keys['KeyW'] || keys['ArrowUp']) {
-                
-                playerBody.applyLocalForce(new CANNON.Vec3(0, 0, -moveSpeed), new CANNON.Vec3(0, 0, 0));
-            }
-            if(keys['KeyS'] || keys['ArrowDown']) {
-                playerBody.applyLocalForce(new CANNON.Vec3(0, 0, moveSpeed), new CANNON.Vec3(0, 0, 0));
-            }
-            if(keys['KeyA'] || keys['ArrowLeft']) {
-                playerBody.applyLocalForce(new CANNON.Vec3(-moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
-            }
-            if(keys['KeyD'] || keys['ArrowRight']) {
-                playerBody.applyLocalForce(new CANNON.Vec3(moveSpeed, 0, 0), new CANNON.Vec3(0, 0, 0));
-
-            }
-            
             if(keys['Space']) {
+                playerBody.applyLocalForce(new CANNON.Vec3(0, 0, -moveSpeed), new CANNON.Vec3(0, 0, 0));
                 player.spaceDown = true;
             } else {
                 player.spaceDown = false;
             }
-
-            if(player.spaceDown) {
-                playerBody.applyLocalForce(new CANNON.Vec3(0, moveSpeed*2, 0));
-                // console.log(player.body.gravityForce.scale(-100).vadd(new CANNON.Vec3(0, moveSpeed*2, 0)));
-
-            } 
-            // if(player.boosting) {
-            //     player.boostCapacity > 0 ? player.boostCapacity -= 5 : player.boostCapacity = 0;
-            // } else {
-            //     player.boostCapacity < 1000 ? player.boostCapacity += 2 : player.boostCapacity = 1000;
-            // }
-            // boost.innerText = player.boostCapacity <= 0 ? 0 : player.boostCapacity;
+            
+            if(keys['KeyE']) {
+                //rotate player right
+                let yRotationQuaternion = new CANNON.Quaternion();
+                yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), -0.05);
+                playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+            }
+            if(keys['KeyQ']) {
+                //rotate player left
+                let yRotationQuaternion = new CANNON.Quaternion();
+                yRotationQuaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0.05);
+                playerBody.quaternion = playerBody.quaternion.mult(yRotationQuaternion);
+            }
 
             if(stars) stars.position.copy(playerBody.position);
 
@@ -1099,7 +1125,8 @@
 
         if(keys['KeyT']) {
             player.toggleSpaceShip();
-            spaceship.innerHTML = player.isSpaceShip ? 'Intergalactic <br> Zero-Gravity, Higher Speed' : 'Surface Explorer <br> Affected by Gravity';
+            spaceship.innerHTML = player.isSpaceShip ? 'Intergalactic' : 'Surface Explorer';
+            modeSub.innerHTML = player.isSpaceShip ? 'Zero-Gravity, Higher Speed' : 'Affected by Gravity'
             keys['KeyT'] = false;
         }
         // console.log(playerBody)
@@ -1113,5 +1140,4 @@
 
 
 </script>
-
 </html>
