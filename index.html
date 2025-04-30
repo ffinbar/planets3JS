@@ -84,7 +84,7 @@
 
     #touchUI {
         position: absolute;
-        bottom: 0;
+        bottom: 2rem;
         left: 0;
         right: 0;
         width: 80vw;
@@ -103,12 +103,12 @@
         top: 6rem;
         left: 0;
         right: 0;
-        width: 80vw;
+        width: fit-content;
         margin: 0 auto;
         padding: 0;
         justify-content: space-around;
         z-index: 100;
-        max-width: 100%;
+        max-width: 80vw;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -128,6 +128,10 @@
         height: 0;
         line-height: 0;
         color: transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
     }
 
     .tips p.currentTip {
@@ -154,6 +158,7 @@
 
     #forward {
         transform: rotate(180deg);
+        font-size: 3rem;
     }
 
     #left {
@@ -187,6 +192,7 @@
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
+        gap: 1rem;
     }
 
     #shipModeTouch {
@@ -211,6 +217,37 @@
         transition: opacity 1s;
     }
 
+    @keyframes breathe {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .nextBtn, #restartTipsTouch {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0 0 0 1rem;
+        font-size: 1rem;
+        font-style: italic;
+        animation: breathe 3s infinite;
+    }
+
+    .nextBtn.touch, #restartTipsTouch {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 1rem;
+        padding: .5rem 1rem;
+        color: white;
+        font-size: 1.5rem;
+        width: 50%;
+    }
+
 </style>
 <body>
     <!-- <div id="tutorial">
@@ -223,25 +260,30 @@
         <p>Press Escape to unlock the mouse and see these instructions again</p>
     </div> -->
     <div id="touchTips" class="tips" style="display: none;">
-        <p data-delay="10000" class="currentTip">Welcome! Swipe the screen to look around, and press the forward button to fly your ship</p>
-        <p data-delay="5000">When in Landing mode, (like right now) you are affected by planet's gravity</p>
-        <p data-takeoff="true">After Takeoff, you can fly faster and are unaffected by gravity</p>
-        <p data-delay="7000" data-tilt="true">Swipe to steer your ship while in Takeoff mode. You can also roll your ship by tilting your device. Try steering with one finger while pressing the forward button with another.</p>
-        <p data-delay="5000">Gravity fields are represented as spheres around planets</p>
-        <p data-delay="7000">Some gravity fields are stronger than others, and will conflict with each other. You may be unable to land if you are too close to multiple planets</p>
-        <p data-delay="7000">Your ship will orient itself to the closest planet's gravity field when in Landing mode. You will also match the planet's rotation and move with it</p>
+        <p data-condition="swipe" class="currentTip">Welcome! Swipe the screen to look around.</p>
+        <p data-condition="forward">Press the forward button to fly your ship. <br>The Boost button will make you fly faster.</p>
+        <p data-condition="manual">When in Landing mode, (like right now) you are affected by planet's gravity.</p>
+        <p data-condition="takeoff">Press Takeoff to fly faster and be unaffected by gravity.</p>
+        <p data-condition="manual">Swipe to steer your ship while in Takeoff mode. You can also roll your ship by tilting your device. Try steering with one finger while pressing the forward button with another.</p>
+        <p data-condition="manual">Gravity fields are represented as spheres around planets.</p>
+        <p data-condition="manual">Some gravity fields are stronger than others, and will conflict with each other. You may be unable to land if you are too close to multiple planets.</p>
+        <p data-condition="manual">Your ship will orient itself to the closest planet's gravity field when in Landing mode. You will also match the planet's rotation and move with it.</p>
+        <p data-condition="restart">Would you like to see these instructions again? <button id="restartTipsTouch">Restart</button></p>
     </div>
     <div id="desktopTips" class="tips">
-        <p data-delay="10000" class="currentTip">Welcome! Click anywhere to lock the mouse to the player</p>
-        <p data-delay="7000">Use the mouse to look around, and Space to fly your ship forward</p>
-        <p data-delay="7000">Hold Shift to boost your thrusters</p>
-        <p data-delay="15000">Your ship has two modes. In Surface Explorer mode you will be affected by gravity (like right now)</p>
-        <p data-delay="5000" data-takeoff="true">Press T to takeoff and enter Intergalactic Mode</p>
-        <p data-delay="10000">In Intergalactic Mode, you will not be affected by gravity and can fly faster</p>
-        <p data-delay="5000">Your spaceship mode is displayed in the top-left corner</p>
-        <p data-delay="5000">Use Q and E to roll your ship</p>
-        <p data-delay="5000">Press Escape to unlock the mouse</p>
-        <p data-delay="10000">Would you like to see these instructions again? Click <button id="showInstructions">here</button></p>
+        <p data-condition="click" class="currentTip">Welcome! Click anywhere to lock the mouse to the player.</p>
+        <p data-condition="space">Use the mouse to look around, and press Space to fly your ship forward.</p>
+        <p data-condition="boost">Hold Shift to boost your thrusters.</p>
+        <p data-condition="manual">Your ship has two modes. In Surface Explorer mode you will be affected by gravity (like right now).</p>
+        <p data-condition="takeoff">Press T to takeoff and enter Intergalactic Mode.</p>
+        <p data-condition="manual">In Intergalactic Mode, you will not be affected by gravity and can fly faster.</p>
+        <p data-condition="manual">Your spaceship mode is displayed at the top of the screen.</p>
+        <p data-condition="roll">Use Q and E to roll your ship.</p>
+        <p data-condition="manual">Press Escape to unlock the mouse.</p>
+        <p data-condition="manual">Gravity fields are represented as spheres around planets.</p>
+        <p data-condition="manual">Some gravity fields are stronger than others, and will conflict with each other. You may be unable to land if you are too close to multiple planets.</p>
+        <p data-condition="manual">Your ship will orient itself to the closest planet's gravity field when in Landing mode. You will also match the planet's rotation and move with it.</p>
+        <p data-condition="restart">Would you like to see these instructions again? Press Enter to restart.</p>
     </div>
     <div id="touchUI" style="display: none;">
         <div id="accelToggle">
@@ -294,6 +336,9 @@
     import Stats from 'https://unpkg.com/three/examples/jsm/libs/stats.module.js';
     import Planet from './Planet.js';
     import Player from './Player.js';
+    import { TutorialManager, isTouchDevice, TUTORIAL_CONDITIONS } from './TutorialManager.js';
+
+    let tutorialManager;
 
     let scene, camera, renderer, controls, composer;
     let clock = new THREE.Clock();
@@ -328,67 +373,82 @@
     let hud = document.getElementById('hud');
     let spaceship = document.getElementById('spaceship');
     let boost = document.getElementById('boost');
-    let touchUI, touchTips, desktopTips;
+    let touchUI = document.getElementById('touchUI');
+    let desktopTips = document.getElementById('desktopTips');
+    let touchTips = document.getElementById('touchTips');
 
     let touchFwd = document.getElementById('forward');
     let boostToggle = document.getElementById('boostBtn')
     let takeoffToggle = document.getElementById('shipModeTouch');
     let modeSub = document.getElementById('modeSub');
 
-    let showInstructions = document.getElementById('showInstructions');
-
     let accelToggle = document.getElementById('accelToggle');
     let accel = true;
 
-    init();
-    animate();
+    let currentTipIndex = 0;
+    let tips;
 
     document.addEventListener('DOMContentLoaded', () => {
+        tutorialManager = new TutorialManager(touchTips, desktopTips);
         document.addEventListener('click', () => {
-            nextTip(0, 5000);
+            setCondition('click', true);
         }, { once: true });
     });
 
-    showInstructions.addEventListener('click', () => {
-        let instructionsParent = showInstructions.parentElement;
-        instructionsParent.classList.remove('currentTip');
-        desktopTips.style.display = 'flex';
-        touchTips.style.display = 'none';
-        nextTip(0, 5000);
-    });
+    function setCondition(condition, value) {
+        if (tutorialManager) tutorialManager.setCondition(condition, value);
+    }
 
-    function nextTip(idx, delay) {
-        let tips = isTouchDevice() ? touchTips.children : desktopTips.children;
-        let currentTip = tips[idx];
-        if(currentTip.dataset.takeoff) {
-            if(isTouchDevice()) {
-                takeoffToggle.style.opacity = 1;
-                takeoffToggle.style.pointerEvents = 'auto';
-            } else {
-                modeSub.innerHTML = 'Press T to Takeoff';
+    // Automatically check tutorial conditions in the animation loop
+    function checkTutorialConditions() {
+        if (!tutorialManager) return;
+        const currentTip = tutorialManager.tips[tutorialManager.currentTipIndex];
+        if (!currentTip) return;
+        const cond = currentTip.dataset.condition;
+        if (TUTORIAL_CONDITIONS[cond]) {
+            // Only auto-advance for non-manual/restart tips
+            if (cond !== 'manual' && cond !== 'restart') {
+                if (!currentTip.dataset.met) {
+                    const met = TUTORIAL_CONDITIONS[cond](keys, player);
+                    if (met) {
+                        setCondition(cond, true);
+                    }
+                }
             }
         }
-        if(currentTip.dataset.tilt) {
-            accelToggle.style.opacity = 1;
-            accelToggle.style.pointerEvents = 'auto';
-        }
-        let nextTipIdx = tips[idx + 1];
-        if(nextTipIdx) {
-            setTimeout(() => {
-                currentTip.classList.remove('currentTip');
-                nextTipIdx.classList.add('currentTip');
-                if(nextTipIdx.dataset.delay) {
-                    delay = nextTipIdx.dataset.delay;
-                }
-                nextTip(idx + 1, delay);
-            }, delay);
-        } else {
-            setTimeout(() => {
-                currentTip.classList.remove('currentTip');
-            }, delay);
-        }
     }
-    
+
+    // Add a single persistent Enter key listener for advancing tutorial tips
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && tutorialManager) {
+            const currentTip = tutorialManager.tips[tutorialManager.currentTipIndex];
+            console.log('Enter pressed. Current tip:', currentTip);
+            // Only reset if on the restart tip
+            if (currentTip && currentTip.dataset.condition === 'restart') {
+                console.log('Enter on restart tip, resetting tutorial');
+                event.preventDefault();
+                tutorialManager.reset();
+                return;
+            }
+            // Otherwise, only advance if a nextBtn is present
+            const nextBtn = currentTip ? currentTip.querySelector('.nextBtn') : null;
+            if (nextBtn) {
+                event.preventDefault();
+                nextBtn.click();
+            }
+        }
+    });
+
+    // Add restart functionality for both desktop and touch tips
+    const restartBtnTouch = document.getElementById('restartTipsTouch');
+    if (restartBtnTouch) {
+        restartBtnTouch.addEventListener('click', () => {
+            if (tutorialManager) tutorialManager.reset();
+        });
+    }
+
+    init();
+    animate();
 
     function init() {
         
@@ -406,8 +466,6 @@
         createObjects();
         lightSetup();
         createPlayer();
-
-        
 
         let keyDownListener = function(event) {
             event.preventDefault();
@@ -435,9 +493,11 @@
             keys['ShiftLeft'] = !keys['ShiftLeft'];
             if(keys['ShiftLeft']) {
                 boostToggle.classList.add('active');
+                boostToggle.innerHTML = 'Boosting';
             } else {
                 boostToggle.classList.remove('active');
-            }
+                 boostToggle.innerHTML = 'Boost';
+           }
         });
 
         takeoffToggle.addEventListener('touchstart', () => {
@@ -556,13 +616,7 @@
             hud.style.display = 'block';
         }
 
-
     }
-
-    function isTouchDevice() {
-        return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-    }
-    
 
     function sceneSetup() {
         scene = new THREE.Scene();
@@ -960,7 +1014,7 @@
 
         // console.log(playerBody
 
-        
+        checkTutorialConditions();
 
         if(player) {
 
@@ -1082,13 +1136,17 @@
             let moveSpeed = 50;
             moveSpeed = player.boosting ? moveSpeed * 10 : moveSpeed;
 
-            if(keys['Space']) {
+            // Make Shift act as forward (Space) on desktop
+            let isTouch = isTouchDevice();
+            let forwardPressed = keys['Space'] || (!isTouch && keys['ShiftLeft']);
+
+            if(forwardPressed) {
                 playerBody.applyLocalForce(new CANNON.Vec3(0, 0, -moveSpeed), new CANNON.Vec3(0, 0, 0));
                 player.spaceDown = true;
             } else {
                 player.spaceDown = false;
             }
-            
+
             if(keys['KeyE']) {
                 //rotate player right
                 let yRotationQuaternion = new CANNON.Quaternion();
@@ -1138,6 +1196,4 @@
         renderer.render(scene, camera);
     }
 
-
 </script>
-</html>
